@@ -1,2 +1,7 @@
+
+.zcode/
+shots/
+server.log
+scan-report.json
 node_modules/
 .env
