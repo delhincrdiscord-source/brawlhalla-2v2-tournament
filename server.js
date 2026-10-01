@@ -101,6 +101,28 @@ function createApp(store, opts = {}) {
     next();
   }
 
+  // ---- Cloudflare Turnstile (bot protection on public registration) ----
+  // Skipped when the secret is not configured, so local dev and tests work
+  // unchanged; production sets TURNSTILE_SECRET.
+  const turnstileSecret = opts.turnstileSecret || process.env.TURNSTILE_SECRET;
+  async function verifyTurnstile(token, ip) {
+    if (!turnstileSecret) return { ok: true, skipped: true };
+    if (!token || typeof token !== 'string') return { ok: false, reason: 'missing-token' };
+    try {
+      const form = new URLSearchParams({ secret: turnstileSecret, response: token });
+      if (ip) form.set('remoteip', ip);
+      const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        body: form,
+      });
+      const data = await res.json();
+      return { ok: !!data.success, reason: (data['error-codes'] || []).join(',') || 'failed' };
+    } catch (err) {
+      // network/API trouble must not lock players out of registering
+      return { ok: true, degraded: true, reason: err.message };
+    }
+  }
+
   // ---- public API ----
   app.get('/api/status', async (req, res) => {
     try {
@@ -122,6 +144,17 @@ function createApp(store, opts = {}) {
         return res
           .status(403)
           .json({ error: 'REGISTRATION_CLOSED', message: 'Registration is closed.' });
+
+      // bot check before anything touches the database
+      const captcha = await verifyTurnstile(
+        req.body && req.body.turnstileToken,
+        req.ip || req.socket?.remoteAddress
+      );
+      if (!captcha.ok)
+        return res.status(400).json({
+          error: 'CAPTCHA_FAILED',
+          message: 'Bot verification failed — please refresh the page and try again.',
+        });
 
       // same-person check takes priority over field validation
       if (

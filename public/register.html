@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=11">
+<link rel="stylesheet" href="/css/style.css?v=12">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
 </head>
 <body>
@@ -135,6 +135,9 @@
       </div>
 
       <div class="form-banner" id="banner"></div>
+      <div class="turnstile-row">
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAFLNgaeWo3YaWP1R" data-theme="dark" data-size="flexible"></div>
+      </div>
       <div class="form-actions">
         <button type="submit" class="btn" id="submitBtn">⚔️ Lock In Our Team</button>
       </div>
@@ -147,6 +150,7 @@
 
 <script src="/js/particles.js"></script>
 <script src="/js/common.js?v=5"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
   document.getElementById('navCrest').innerHTML = crestSVG('sigil');
   markActiveNav();
@@ -170,12 +174,20 @@
     }
   }).catch(() => {});
 
+  const turnstileToken = () => {
+    const el = form.querySelector('[name="cf-turnstile-response"]');
+    return el ? el.value : '';
+  };
+  // Turnstile tokens are single-use — refresh the widget so a retry can succeed
+  const resetTurnstile = () => { if (window.turnstile) try { window.turnstile.reset(); } catch (e) {} };
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     banner.className = 'form-banner';
     const val = (id) => document.getElementById(id).value.trim();
     const body = {
       name: val('team_name'),
+      turnstileToken: turnstileToken(),
       p1: {
         discordId: val('p1_discordId'),
         username: val('p1_username'),
@@ -208,15 +220,18 @@
         banner.className = 'form-banner error';
         banner.textContent = data.message || 'Registration failed. Check your inputs.';
         toast(data.message || 'Registration failed', true);
+        resetTurnstile();
       }
     } catch (err) {
       banner.className = 'form-banner error';
       banner.textContent = 'Network error — try again.';
+      resetTurnstile();
     } finally {
       btn.disabled = false;
       btn.textContent = '⚔️ Lock In Our Team';
     }
   });
 </script>
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6fcb1941347c4bc1a6effc90c397b981"}'></script>
 </body>
 </html>

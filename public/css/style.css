@@ -625,6 +625,9 @@ nav {
   color: var(--ok);
 }
 .form-actions { margin-top: 32px; text-align: center; }
+/* Cloudflare Turnstile widget — centred above the submit button */
+.turnstile-row { display: flex; justify-content: center; margin-top: 26px; min-height: 65px; }
+.turnstile-row .cf-turnstile { max-width: 100%; }
 
 /* ---------- bracket ---------- */
 .bracket-cols {
