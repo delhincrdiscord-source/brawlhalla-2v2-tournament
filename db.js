@@ -28,17 +28,19 @@ CREATE TABLE IF NOT EXISTS brackets (
 `;
 
 /**
- * Point the pool at Neon's pooled endpoint (-pooler, port 6543) when running
- * on serverless (Vercel). Many short-lived lambda instances would otherwise
- * exhaust Neon's direct-connection limit; PgBouncer in transaction mode fixes
- * that. Local dev keeps the direct connection unchanged.
+ * Point the pool at Neon's pooled endpoint when running on serverless (Vercel):
+ * `-pooler` is inserted into the endpoint id (ep-xxxx), NOT before `.neon.tech`.
+ *   ep-abc.c-4.us-east-1.aws.neon.tech
+ *     -> ep-abc-pooler.c-4.us-east-1.aws.neon.tech
+ * Port is switched to the pooler port 6543. A URL that already says -pooler is
+ * left alone. Local dev keeps the direct connection unchanged.
  */
-function pooledConnectionString(url) {
-  if (!process.env.VERCEL || !url || !url.includes('.neon.tech')) return url;
-  return url
-    .replace('-pooler.', '.')  // undo any pasted pooled host first
-    .replace('.neon.tech', '-pooler.neon.tech')
-    .replace(/:(\d+)\//, ':6543/');
+function pooledConnectionString(conn) {
+  if (!process.env.VERCEL || !conn || !conn.includes('.neon.tech')) return conn;
+  let out = conn.replace(/@((ep-[^.@:]+?)(?:-pooler)?)\./i, '@$2-pooler.');
+  if (/@[^/?]+:\d+/.test(out)) out = out.replace(/(@[^/?]+):\d+/, '$1:6543');
+  else out = out.replace(/(@[^/?]+)([/?])/, '$1:6543$2');
+  return out;
 }
 
 function createPostgresStore(databaseUrl) {
