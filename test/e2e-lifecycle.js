@@ -19,6 +19,7 @@ async function req(method, path, body) {
 
 function team(i, elo) {
   return {
+    name: `E2E Squad ${i}`,
     p1: { discordId: `1${String(i).padStart(3, '0')}000000000000001`, username: `E2E_P${i}a`, elo, peak: elo + 200 },
     p2: { discordId: `1${String(i).padStart(3, '0')}000000000000002`, username: `E2E_P${i}b`, elo: elo - 100, peak: elo + 100 },
   };

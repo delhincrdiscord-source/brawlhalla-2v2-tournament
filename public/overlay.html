@@ -140,12 +140,14 @@
   const params = new URLSearchParams(location.search);
   const pinned = params.get('match');
 
-  function teamLabel(teams, slot) {
+  function slotTeam(teams, slot) {
     if (!slot || slot.teamId === null) return { name: 'TBD', players: '' };
     const t = teams.find((x) => x.id === slot.teamId);
-    return t
-      ? { name: `${t.p1.username} / ${t.p2.username}`, players: '' }
-      : { name: 'Team ' + slot.teamId, players: '' };
+    if (!t) return { name: 'Team ' + slot.teamId, players: '' };
+    const label = (t.name && String(t.name).trim())
+      ? String(t.name).trim()
+      : `${t.p1.username} / ${t.p2.username}`;
+    return { name: label, players: `${t.p1.username} · ${t.p2.username}` };
   }
 
   function findFeatured(bracket) {
@@ -194,8 +196,8 @@
       wrap.innerHTML = '<div class="ov-empty">NO ACTIVE MATCH</div>';
       return;
     }
-    const a = teamLabel(teams, m.slots[0]);
-    const bb = teamLabel(teams, m.slots[1]);
+    const a = slotTeam(teams, m.slots[0]);
+    const bb = slotTeam(teams, m.slots[1]);
     const decided = !!m.winner;
     const winIdx = decided ? m.slots.findIndex((s) => s.slotId === m.winner) : -1;
     const scoreHtml = decided

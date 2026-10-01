@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="stylesheet" href="/css/style.css?v=11">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
 </head>
 <body>
@@ -91,6 +91,7 @@
 
     <div class="admin-card glass glow-hover tilt3d">
       <h3>➕ Force Register</h3>
+      <div class="field"><label>Team Name</label><input id="fname" placeholder="Team name" maxlength="32"></div>
       <div class="field"><label>Player 1 — Discord ID</label><input id="fp1d" placeholder="123456789012345678"></div>
       <div class="field"><label>Player 1 — Username</label><input id="fp1u" placeholder="Name"></div>
       <div class="field"><label>Player 1 — Current / Peak Elo</label>
@@ -118,7 +119,7 @@
 <div id="toast"></div>
 
 <script src="/js/particles.js"></script>
-<script src="/js/common.js?v=4"></script>
+<script src="/js/common.js?v=5"></script>
 <script>
   document.getElementById('navCrest').innerHTML = crestSVG('sigil');
   markActiveNav();
@@ -185,7 +186,7 @@
     tbody.innerHTML = (teams.data.teams || []).map((t, i) => `
       <tr>
         <td>${i + 1}</td>
-        <td class="team-pair"><b>${esc(t.p1.username)}</b> <span>+ ${esc(t.p2.username)}</span></td>
+        <td class="team-pair"><b>${esc(teamLabel(t))}</b> <span>${esc(t.p1.username)} + ${esc(t.p2.username)}</span></td>
         <td>${esc(t.p1.username)} <span style="color:var(--ink-dim)">(${esc(t.p1.discordId)})</span></td>
         <td>${esc(t.p2.username)} <span style="color:var(--ink-dim)">(${esc(t.p2.discordId)})</span></td>
         <td>${t.p1.elo}/${t.p1.peak} · ${t.p2.elo}/${t.p2.peak}</td>
@@ -235,6 +236,7 @@
   document.getElementById('forceBtn').addEventListener('click', async () => {
     const v = (id) => document.getElementById(id).value.trim();
     const body = {
+      name: v('fname'),
       p1: { discordId: v('fp1d'), username: v('fp1u'), elo: Number(v('fp1e')), peak: Number(v('fp1p')) },
       p2: { discordId: v('fp2d'), username: v('fp2u'), elo: Number(v('fp2e')), peak: Number(v('fp2p')) },
     };

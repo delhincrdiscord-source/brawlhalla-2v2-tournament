@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="stylesheet" href="/css/style.css?v=11">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
 </head>
 <body>
@@ -57,7 +57,7 @@
 <div id="toast"></div>
 
 <script src="/js/particles.js"></script>
-<script src="/js/common.js?v=4"></script>
+<script src="/js/common.js?v=5"></script>
 <script>
   document.getElementById('navCrest').innerHTML = crestSVG('sigil');
   markActiveNav();
@@ -81,7 +81,7 @@
     const data = await res.json();
     if (!res.ok) { bar.innerHTML = ''; return; }
     const { team, info } = data;
-    const tname = escHtml(`${team.p1.username} / ${team.p2.username}`);
+    const tname = escHtml(teamLabel(team));
     let status;
     if (info.champion) status = `<span class="mm-champ">🏆 CHAMPION</span>`;
     else if (info.eliminated) status = `<span class="mm-elim">ELIMINATED</span>`;
@@ -196,7 +196,7 @@
 
   function render(data, adminView) {
     const { bracket } = data;
-    (data.teams || []).forEach((t) => teamName.set(t.id, `${t.p1.username} / ${t.p2.username}`));
+    (data.teams || []).forEach((t) => teamName.set(t.id, teamLabel(t)));
     eliminatedTeams.clear();
     (data.eliminated || []).forEach((id) => eliminatedTeams.add(id));
     if (!bracket) {

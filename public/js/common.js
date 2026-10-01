@@ -51,6 +51,14 @@ function escHtml(v) {
   ));
 }
 
+// Display name for a team: its own name when set, else the two usernames.
+// Teams registered before the name field existed have name === null.
+function teamLabel(t) {
+  if (!t) return '';
+  if (t.name && String(t.name).trim()) return String(t.name).trim();
+  return `${t.p1.username} / ${t.p2.username}`;
+}
+
 async function fetchStatus() {
   const res = await fetch('/api/status');
   return res.json();

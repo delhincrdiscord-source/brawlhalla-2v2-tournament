@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="stylesheet" href="/css/style.css?v=11">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
 </head>
 <body>
@@ -69,7 +69,7 @@
         <span class="${h.won ? 'tp-won' : 'tp-lost'}">${h.won ? 'W' : 'L'} ${h.scores[0]}–${h.scores[1]}</span>
       </div>`).join('');
     out.innerHTML = `<div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
-      <b>${team.p1.username} / ${team.p2.username}</b> — ${status}
+      <b>${escHtml(teamLabel(team))}</b> — ${status}
       ${info.history.length ? '<div style="margin-top:12px; color:var(--ink-dim); font-size:0.85rem;">MATCH HISTORY</div>' + hist : ''}
       ${!info.history.length && !info.next ? '<div style="color:var(--ink-dim); margin-top:8px;">No matches yet.</div>' : ''}
     </div>`;
@@ -79,6 +79,14 @@
 <section class="section wrap" style="padding-top: 10px;">
   <div class="form-shell" id="formShell">
     <form id="regForm" novalidate>
+      <fieldset class="simple-card team-name-card" style="margin-bottom:22px;">
+        <legend>Team</legend>
+        <div class="field">
+          <label for="team_name">Team Name</label>
+          <input id="team_name" name="team_name" placeholder="e.g. Valhalla Rejects" maxlength="32" autocomplete="off">
+          <div class="hint">This is how your duo appears on the bracket and everywhere else — pick something good.</div>
+        </div>
+      </fieldset>
       <div class="simple-grid">
         <fieldset class="simple-card p1">
           <legend>Player 1</legend>
@@ -138,7 +146,7 @@
 <div id="toast"></div>
 
 <script src="/js/particles.js"></script>
-<script src="/js/common.js?v=4"></script>
+<script src="/js/common.js?v=5"></script>
 <script>
   document.getElementById('navCrest').innerHTML = crestSVG('sigil');
   markActiveNav();
@@ -167,6 +175,7 @@
     banner.className = 'form-banner';
     const val = (id) => document.getElementById(id).value.trim();
     const body = {
+      name: val('team_name'),
       p1: {
         discordId: val('p1_discordId'),
         username: val('p1_username'),

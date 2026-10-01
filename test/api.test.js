@@ -48,6 +48,7 @@ const VALID_TEAM = {
 
 function postTeam(overrides = {}) {
   return {
+    name: overrides.name || 'Test Team',
     p1: { ...VALID_TEAM.p1, ...overrides.p1 },
     p2: { ...VALID_TEAM.p2, ...overrides.p2 },
   };
@@ -214,6 +215,7 @@ describe('admin operations', () => {
   test('force register works while registration is closed', async () => {
     await post('/api/admin/settings', { open: false });
     const res = await post('/api/admin/force-register', {
+      name: 'Forced Team',
       p1: { discordId: '666666666666666666', username: 'Forced1', elo: 1200, peak: 1300 },
       p2: { discordId: '777777777777777777', username: 'Forced2', elo: 1100, peak: 1200 },
     });
@@ -223,6 +225,7 @@ describe('admin operations', () => {
 
   test('force register still rejects duplicates', async () => {
     const res = await post('/api/admin/force-register', {
+      name: 'Dup Team',
       p1: { discordId: '999888777666555444', username: 'Fresh', elo: 1000, peak: 1100 },
       p2: { discordId: '234567890123456789', username: 'Dup2', elo: 1000, peak: 1100 },
     });

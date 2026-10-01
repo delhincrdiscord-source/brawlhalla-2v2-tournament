@@ -10,6 +10,7 @@ const {
   validateRegistration,
   findDuplicate,
   normalizeTeam,
+  teamDisplayName,
 } = require('./lib/registration');
 const {
   announceRegistration,
@@ -239,7 +240,7 @@ function createApp(store, opts = {}) {
       const teams = await store.getTeams();
       const seeded = teams.map((t) => ({
         id: t.id,
-        name: `${t.p1.username} / ${t.p2.username}`,
+        name: teamDisplayName(t),
         avgElo: (t.p1.elo + t.p2.elo) / 2,
       }));
       const bracket = generateBracket(seeded);
@@ -319,7 +320,8 @@ function createApp(store, opts = {}) {
           String(t.p1.discordId) === q ||
           String(t.p2.discordId) === q ||
           t.p1.username.toLowerCase() === q ||
-          t.p2.username.toLowerCase() === q
+          t.p2.username.toLowerCase() === q ||
+          (t.name || '').toLowerCase() === q
       );
       if (!team)
         return res.status(404).json({
@@ -368,11 +370,12 @@ function createApp(store, opts = {}) {
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const rows = [
-      ['team_id', 'p1_username', 'p1_discord_id', 'p1_elo', 'p1_peak', 'p2_username', 'p2_discord_id', 'p2_elo', 'p2_peak', 'avg_elo', 'registered_at'],
+      ['team_id', 'team_name', 'p1_username', 'p1_discord_id', 'p1_elo', 'p1_peak', 'p2_username', 'p2_discord_id', 'p2_elo', 'p2_peak', 'avg_elo', 'registered_at'],
     ];
     for (const t of teams) {
       rows.push([
         t.id,
+        teamDisplayName(t),
         t.p1.username, t.p1.discordId, t.p1.elo, t.p1.peak,
         t.p2.username, t.p2.discordId, t.p2.elo, t.p2.peak,
         Math.round((t.p1.elo + t.p2.elo) / 2),

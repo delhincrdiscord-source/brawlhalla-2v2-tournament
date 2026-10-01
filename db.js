@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS teams (
   id SERIAL PRIMARY KEY,
+  name TEXT,
   p1_discord_id TEXT NOT NULL,
   p1_username TEXT NOT NULL,
   p1_elo INTEGER NOT NULL,
@@ -25,6 +26,8 @@ CREATE TABLE IF NOT EXISTS brackets (
   id INTEGER PRIMARY KEY DEFAULT 1,
   data JSONB NOT NULL
 );
+-- migration for databases created before team names existed
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS name TEXT;
 `;
 
 /**
@@ -66,10 +69,11 @@ function createPostgresStore(databaseUrl) {
     async insertTeam(team) {
       const { rows } = await pool.query(
         `INSERT INTO teams
-         (p1_discord_id, p1_username, p1_elo, p1_peak,
+         (name, p1_discord_id, p1_username, p1_elo, p1_peak,
           p2_discord_id, p2_username, p2_elo, p2_peak)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
         [
+          team.name || null,
           team.p1.discordId, team.p1.username, team.p1.elo, team.p1.peak,
           team.p2.discordId, team.p2.username, team.p2.elo, team.p2.peak,
         ]
@@ -137,6 +141,7 @@ function createPostgresStore(databaseUrl) {
 function rowToTeam(r) {
   return {
     id: r.id,
+    name: r.name || null,
     p1: {
       discordId: r.p1_discord_id,
       username: r.p1_username,
