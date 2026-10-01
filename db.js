@@ -28,19 +28,16 @@ CREATE TABLE IF NOT EXISTS brackets (
 `;
 
 /**
- * Point the pool at Neon's pooled endpoint when running on serverless (Vercel):
- * `-pooler` is inserted into the endpoint id (ep-xxxx), NOT before `.neon.tech`.
- *   ep-abc.c-4.us-east-1.aws.neon.tech
- *     -> ep-abc-pooler.c-4.us-east-1.aws.neon.tech
- * Port is switched to the pooler port 6543. A URL that already says -pooler is
- * left alone. Local dev keeps the direct connection unchanged.
+ * Point the pool at Neon's pooled endpoint when running on serverless (Vercel).
+ * Only the host changes: `-pooler` is inserted into the endpoint id (ep-xxxx),
+ * and the port is left as supplied — Neon's pooled endpoint is reached on 5432;
+ * 6543 is not reachable on current Neon endpoints.
+ *   ep-abc.c-4.us-east-1.aws.neon.tech -> ep-abc-pooler.c-4.us-east-1.aws.neon.tech
+ * A URL that already says -pooler is left alone. Local dev is unchanged.
  */
 function pooledConnectionString(conn) {
   if (!process.env.VERCEL || !conn || !conn.includes('.neon.tech')) return conn;
-  let out = conn.replace(/@((ep-[^.@:]+?)(?:-pooler)?)\./i, '@$2-pooler.');
-  if (/@[^/?]+:\d+/.test(out)) out = out.replace(/(@[^/?]+):\d+/, '$1:6543');
-  else out = out.replace(/(@[^/?]+)([/?])/, '$1:6543$2');
-  return out;
+  return conn.replace(/@((ep-[^.@:]+?)(?:-pooler)?)\./i, '@$2-pooler.');
 }
 
 function createPostgresStore(databaseUrl) {
