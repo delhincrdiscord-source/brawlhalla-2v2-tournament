@@ -5,3 +5,5 @@ server.log
 scan-report.json
 node_modules/
 .env
+.vercel/
+.env*.local
