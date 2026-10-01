@@ -81,14 +81,14 @@
     const data = await res.json();
     if (!res.ok) { bar.innerHTML = ''; return; }
     const { team, info } = data;
-    const tname = `${team.p1.username} / ${team.p2.username}`;
+    const tname = escHtml(`${team.p1.username} / ${team.p2.username}`);
     let status;
     if (info.champion) status = `<span class="mm-champ">🏆 CHAMPION</span>`;
     else if (info.eliminated) status = `<span class="mm-elim">ELIMINATED</span>`;
     else if (info.next) {
-      const opp = typeof info.next.opponent === 'number'
+      const opp = escHtml(typeof info.next.opponent === 'number'
         ? (teamName.get(info.next.opponent) || 'Team ' + info.next.opponent)
-        : 'TBD';
+        : 'TBD');
       status = `<span class="mm-next">Next: <b>${info.next.round}</b> vs <b>${opp}</b> · Bo${info.next.bestOf}</span>`;
     } else status = `<span class="mm-next">Waiting for bracket</span>`;
     bar.innerHTML = `<div class="glass mm-bar">🔎 <b>${tname}</b> ${status}
@@ -123,25 +123,25 @@
     const res = await fetch('/api/teams/' + teamId + '/bracket');
     if (!res.ok) { body.innerHTML = '<p>Team not found.</p>'; return; }
     const { team, info } = await res.json();
-    const fmtPlayer = (p) => `<div class="tp-player"><b>${p.username}</b>
-      <span style="color:var(--ink-dim);">${p.discordId}</span>
-      <span class="tp-elo">Elo ${p.elo} · Peak ${p.peak}</span></div>`;
+    const fmtPlayer = (p) => `<div class="tp-player"><b>${escHtml(p.username)}</b>
+      <span style="color:var(--ink-dim);">${escHtml(p.discordId)}</span>
+      <span class="tp-elo">Elo ${escHtml(p.elo)} · Peak ${escHtml(p.peak)}</span></div>`;
     const rows = info.history.map((h) => {
-      const opp = typeof h.opponent === 'number'
-        ? (teamName.get(h.opponent) || 'Team ' + h.opponent) : (h.opponent || '—');
+      const opp = escHtml(typeof h.opponent === 'number'
+        ? (teamName.get(h.opponent) || 'Team ' + h.opponent) : (h.opponent || '—'));
       return `<tr><td>${h.round}</td><td>${opp}</td>
         <td class="${h.won ? 'tp-won' : 'tp-lost'}">${h.won ? 'W' : 'L'} ${h.scores[0]}–${h.scores[1]}</td>
         <td style="color:var(--ink-dim);">Bo${h.bestOf}</td></tr>`;
     }).join('');
     let nextHtml = '';
     if (info.next) {
-      const opp = typeof info.next.opponent === 'number'
+      const opp = escHtml(typeof info.next.opponent === 'number'
         ? (teamName.get(info.next.opponent) || 'Team ' + info.next.opponent)
-        : (info.next.opponent || 'TBD');
-      nextHtml = `<div class="tp-next">⚔️ Next: <b>${info.next.round}</b> vs <b>${opp}</b> (Bo${info.next.bestOf})</div>`;
+        : (info.next.opponent || 'TBD'));
+      nextHtml = `<div class="tp-next">⚔️ Next: <b>${escHtml(info.next.round)}</b> vs <b>${opp}</b> (Bo${info.next.bestOf})</div>`;
     }
     body.innerHTML = `
-      <h2 class="h-display grad-text" style="font-size:1.3rem;">${teamName.get(team.id) || ''}</h2>
+      <h2 class="h-display grad-text" style="font-size:1.3rem;">${escHtml(teamName.get(team.id) || '')}</h2>
       ${info.champion ? '<div class="tp-champ">🏆 VALHALLA CHAMPION</div>' : ''}
       ${info.eliminated ? '<div class="tp-elim-badge">ELIMINATED</div>' : ''}
       ${nextHtml}
@@ -164,7 +164,7 @@
       if (m.isBye && s.bye) return `<div class="slot"><span>BYE</span></div>`;
       return `<div class="slot"><span>TBD</span></div>`;
     }
-    const name = teamName.get(s.teamId) || `Team ${s.teamId}`;
+    const name = escHtml(teamName.get(s.teamId) || `Team ${s.teamId}`);
     const banner = teamBanner(name);
     const isWinner = m.winner === s.slotId;
     const isLoser = m.winner && m.winner !== s.slotId;
@@ -377,9 +377,9 @@
     const ov = document.getElementById('vsOverlay');
     const fl = document.getElementById('vsFlash');
     document.getElementById('vsLeft').innerHTML =
-      `<div class="vs-name">${n1}</div><div class="vs-banner" style="background:${teamColors(n1).grad}"></div>`;
+      `<div class="vs-name">${escHtml(n1)}</div><div class="vs-banner" style="background:${teamColors(n1).grad}"></div>`;
     document.getElementById('vsRight').innerHTML =
-      `<div class="vs-name">${n2}</div><div class="vs-banner" style="background:${teamColors(n2).grad}"></div>`;
+      `<div class="vs-name">${escHtml(n2)}</div><div class="vs-banner" style="background:${teamColors(n2).grad}"></div>`;
     ov.querySelector('.vs-hint').textContent = `BEST OF ${bo} · Click anywhere to close`;
     fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
     ov.classList.add('show');

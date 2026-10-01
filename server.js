@@ -20,8 +20,47 @@ const { maybePostRoundImage } = require('./lib/round-webhook');
 function createApp(store, opts = {}) {
   const adminPassword = opts.adminPassword || 'change-me';
   const app = express();
-  app.use(express.json());
+  app.disable('x-powered-by');
+  app.use(express.json({ limit: '10kb' }));
   app.use(cookieParser());
+
+  // ---- security headers (helmet-lite, no extra deps) ----
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
+  // ---- tiny per-IP fixed-window rate limiter for abuse-prone endpoints ----
+  // On serverless each warm instance keeps its own map; that still blunts
+  // brute-force bursts without an external store.
+  const hits = new Map();
+  function rateLimit({ windowMs, max }) {
+    return (req, res, next) => {
+      const key = req.ip || req.socket?.remoteAddress || 'unknown';
+      const now = Date.now();
+      const rec = hits.get(key);
+      if (!rec || now > rec.reset) {
+        hits.set(key, { count: 1, reset: now + windowMs });
+        return next();
+      }
+      rec.count += 1;
+      if (rec.count > max)
+        return res.status(429).json({ error: 'RATE_LIMITED', message: 'Too many requests — slow down.' });
+      next();
+    };
+  }
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of hits) if (now > v.reset) hits.delete(k);
+  }, 5 * 60 * 1000).unref();
+  // Rate limiting is active in production (Vercel sets NODE_ENV=production).
+  // Tests run many requests from one IP, so it stays off in test/dev.
+  const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+  const loginLimiter = isProd ? rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }) : (req, res, next) => next();
+  const registerLimiter = isProd ? rateLimit({ windowMs: 60 * 1000, max: 10 }) : (req, res, next) => next();
 
   // ---- auth helpers ----
   // Signed stateless session cookie so admin auth survives serverless
@@ -62,7 +101,7 @@ function createApp(store, opts = {}) {
     }
   });
 
-  app.post('/api/register', async (req, res) => {
+  app.post('/api/register', registerLimiter, async (req, res) => {
     try {
       const open = await store.getRegistrationOpen();
       if (!open)
@@ -116,11 +155,16 @@ function createApp(store, opts = {}) {
   });
 
   // ---- admin auth ----
-  app.post('/api/admin/login', (req, res) => {
+  app.post('/api/admin/login', loginLimiter, (req, res) => {
     if (!req.body || req.body.password !== adminPassword)
       return res.status(401).json({ error: 'INVALID_PASSWORD' });
     const token = crypto.randomBytes(24).toString('hex');
-    res.cookie('session', sign(token), { httpOnly: true, sameSite: 'strict' });
+    res.cookie('session', sign(token), {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production' || !!process.env.VERCEL,
+      maxAge: 7 * 24 * 3600 * 1000,
+    });
     res.json({ ok: true });
   });
 

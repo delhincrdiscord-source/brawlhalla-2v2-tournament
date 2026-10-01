@@ -263,13 +263,13 @@
         <div class="spot-kicker">⚡ Upcoming Spotlight</div>
         <div class="glass spotlight-card">
           <div class="spot-side">
-            <div class="spot-name">${n1}</div>
+            <div class="spot-name">${escHtml(n1)}</div>
             <div class="spot-elo">Avg Elo ${avg(m.slots[0].teamId)}</div>
             <div class="vs-banner" style="background:${c1.grad};margin-top:10px;"></div>
           </div>
           <div class="spot-vs">VS</div>
           <div class="spot-side">
-            <div class="spot-name">${n2}</div>
+            <div class="spot-name">${escHtml(n2)}</div>
             <div class="spot-elo">Avg Elo ${avg(m.slots[1].teamId)}</div>
             <div class="vs-banner" style="background:${c2.grad};margin-top:10px;"></div>
           </div>

@@ -43,6 +43,14 @@ function toast(msg, isError) {
   t._timer = setTimeout(() => t.classList.remove('show'), 3800);
 }
 
+// Escape user-supplied strings before interpolating into HTML templates
+// (team names are attacker-controlled via the register form).
+function escHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 async function fetchStatus() {
   const res = await fetch('/api/status');
   return res.json();
