@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brawlhalla 2v2 Championship</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
+</head>
+<body>
+<div class="aurora"></div>
+<canvas id="stars"></canvas>
+<canvas id="embers"></canvas>
+
+<nav>
+  <a class="nav-logo" href="/"><span id="navCrest"></span> BRAWLHALLA <span class="grad-text">2v2</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/bracket">Bracket</a>
+    <a href="#rules">Rules</a>
+    <a href="/register" class="btn small">Register</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div id="heroCrest" class="crest"></div>
+  <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">LOADING</span></div>
+  <h1 class="h-display"><span class="grad-text-fame">BRAWLHALLA</span> <span class="grad-text-cyan">2v2</span><br>CHAMPIONSHIP</h1>
+  <p class="subtitle">Legends Clash. <b>Double Elimination.</b> Hosted on Discord</p>
+  <div class="hero-cta">
+    <a class="btn" href="/register" id="ctaRegister">⚔️ Enter the Arena</a>
+    <a class="btn ghost" href="/bracket">View Bracket</a>
+  </div>
+
+  <div class="countdown-wrap" id="countdownWrap" style="display:none;">
+    <div class="countdown-title" id="cdTitle">Tournament Starts In</div>
+    <div class="countdown" id="countdown">
+      <div class="cd-unit glass"><div class="cd-num grad-text" id="cdDays">0</div><div class="cd-label">Days</div></div>
+      <div class="cd-unit glass"><div class="cd-num grad-text" id="cdHours">0</div><div class="cd-label">Hours</div></div>
+      <div class="cd-unit glass"><div class="cd-num grad-text-cyan" id="cdMins">0</div><div class="cd-label">Minutes</div></div>
+      <div class="cd-unit glass"><div class="cd-num grad-text-cyan" id="cdSecs">0</div><div class="cd-label">Seconds</div></div>
+    </div>
+  </div>
+
+  <div class="stats wrap">
+    <div class="stat glass glow-hover tilt3d reveal">
+      <div class="num grad-text" id="statTeams" data-count="0">0</div>
+      <div class="label">Teams Registered</div>
+    </div>
+    <div class="stat glass glow-hover tilt3d reveal d1">
+      <div class="num grad-text-cyan">2v2</div>
+      <div class="label">Format · Double Elim</div>
+    </div>
+    <div class="stat glass glow-hover tilt3d reveal d2">
+      <div class="num grad-text-fame">OF 3</div>
+      <div class="label">Best-of Series</div>
+    </div>
+    <div class="stat glass glow-hover tilt3d reveal d3">
+      <div class="num grad-text-cyan" id="statSlots" data-count="64">64</div>
+      <div class="label">Slots Available</div>
+    </div>
+  </div>
+</header>
+
+<section class="section wrap" id="about">
+  <div class="section-title reveal">
+    <div class="kicker">The Arena Awaits</div>
+    <h2 class="grad-text">What Is Brawlhalla 2v2?</h2>
+  </div>
+  <div class="cards-3">
+    <div class="card glass glow-hover tilt3d reveal">
+      <div class="icon tilt-pop">⚔️</div>
+      <h3>Double Elimination</h3>
+      <p>Lose once and you're not out — you drop to the losers bracket and fight your way back. Only two losses send you home. Grand final with bracket reset.</p>
+    </div>
+    <div class="card glass glow-hover tilt3d reveal d1">
+      <div class="icon tilt-pop">🛡️</div>
+      <h3>Team Sign-Up</h3>
+      <p>One player registers the duo. Enter Discord IDs, in-game names, and your current &amp; peak 2v2 elo. We track both players so nobody plays on two teams.</p>
+    </div>
+    <div class="card glass glow-hover tilt3d reveal d2">
+      <div class="icon tilt-pop">🏆</div>
+      <h3>Seeded by Skill</h3>
+      <p>Teams are seeded by average current elo, so the strongest squads enter on opposite sides of the bracket. Brackets are generated automatically.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section wrap" id="rules">
+  <div class="section-title reveal">
+    <div class="kicker">Know Before You Brawl</div>
+    <h2 class="grad-text-cyan">Rules &amp; Format</h2>
+  </div>
+  <div class="rules" style="max-width: 780px; margin: 0 auto;" id="rulesList">
+    <div class="rule reveal"><div class="n">01</div><p><b>Registration:</b> one player submits for the team. If either Discord ID or in-game username is already registered, the system blocks the duplicate — no double-teaming.</p></div>
+    <div class="rule reveal"><div class="n">02</div><p><b>Format:</b> 2v2 double elimination. Winners bracket, losers bracket, grand final. If the losers-bracket champion takes game one of the grand final, we run a full bracket reset.</p></div>
+    <div class="rule reveal"><div class="n">03</div><p><b>Matches:</b> best-of-3 until semifinals; best-of-5 from semifinals onward. Legend &amp; weapon bans announced by the TO before each round.</p></div>
+    <div class="rule reveal"><div class="n">04</div><p><b>Schedule:</b> all rounds are played on the Discord server. Check the bracket page after every round — match results go live the moment the TO reports them.</p></div>
+  </div>
+</section>
+
+<section class="section wrap" id="prizes" style="padding-top:0;">
+  <div class="section-title reveal">
+    <div class="kicker">Glory Awaits</div>
+    <h2 class="grad-text">Prizes</h2>
+  </div>
+  <div id="prizesList" class="glass" style="max-width: 780px; margin: 0 auto; padding: 30px 34px; text-align:left; line-height: 1.9; color: var(--ink-dim);">
+    Prize details will be announced on Discord.
+  </div>
+</section>
+
+<section class="section wrap" id="spotlight" style="padding-top:0;">
+  <div class="spotlight" id="spotlightBox" style="display:none;"></div>
+</section>
+
+<section class="section wrap" style="text-align:center;">
+  <div class="glass glow-hover tilt3d reveal" style="padding: 56px 30px;">
+    <h2 class="h-display" style="font-size: clamp(1.5rem, 4vw, 2.4rem);">READY TO <span class="grad-text-fame">BRAWL?</span></h2>
+    <p style="color: var(--ink-dim); margin-top: 14px;">Grab your duo, lock in your legend, and claim your crown.</p>
+    <div class="hero-cta" style="justify-content:center;">
+      <a class="btn" href="/register" id="ctaRegister2">Register Your Team</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div id="footCrest" style="display:flex;justify-content:center;"></div>
+  BRAWLHALLA 2v2 CHAMPIONSHIP · Hosted on Discord · Built for the community
+</footer>
+
+<div id="toast"></div>
+
+<script src="/js/particles.js"></script>
+<script src="/js/common.js?v=4"></script>
+<script>
+  document.getElementById('navCrest').innerHTML = crestSVG('sigil');
+  document.getElementById('heroCrest').innerHTML = crestSVG('sigil');
+  document.getElementById('footCrest').innerHTML = crestSVG('sigil');
+  markActiveNav();
+  revealInit();
+  tiltInit();
+
+  async function refreshStatus() {
+    try {
+      const s = await fetchStatus();
+      const pill = document.getElementById('statusPill');
+      const txt = document.getElementById('statusText');
+      pill.classList.toggle('closed', !s.registrationOpen);
+      txt.textContent = s.registrationOpen ? 'Registration Open' : 'Registration Closed';
+      document.getElementById('statTeams').dataset.count = s.teamCount;
+      document.getElementById('statSlots').dataset.count = Math.max(0, 64 - s.teamCount);
+      const cta = document.getElementById('ctaRegister');
+      const cta2 = document.getElementById('ctaRegister2');
+      [cta, cta2].forEach(a => {
+        if (!s.registrationOpen) {
+          a.textContent = 'Registration Closed';
+          a.style.pointerEvents = 'none';
+          a.style.opacity = '0.5';
+        }
+      });
+      initCountdown(s.tournamentStart);
+    } catch (e) { /* offline */ }
+  }
+
+  // Admin-editable rules/prizes: replace defaults when the TO has saved content
+  fetch('/api/content').then((r) => r.json()).then((c) => {
+    const escHtml = (l) => l.replace(/[&<>]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
+    if (c.rules && c.rules.trim()) {
+      const lines = c.rules.split('\n').map((l) => l.trim()).filter(Boolean);
+      document.getElementById('rulesList').innerHTML = lines
+        .map((l, i) => `<div class="rule reveal"><div class="n">${String(i + 1).padStart(2, '0')}</div><p>${escHtml(l)}</p></div>`)
+        .join('');
+      revealInit();
+    }
+    if (c.prizes && c.prizes.trim()) {
+      document.getElementById('prizesList').innerHTML = c.prizes
+        .split('\n').map((l) => l.trim()).filter(Boolean)
+        .map((l) => `<div>${escHtml(l)}</div>`)
+        .join('');
+    }
+  }).catch(() => {});
+
+  // ----- live countdown to tournament start -----
+  let cdTarget = null;
+  function initCountdown(iso) {
+    if (!iso) {
+      document.getElementById('countdownWrap').style.display = 'none';
+      cdTarget = null;
+      return;
+    }
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return;
+    cdTarget = d.getTime();
+    document.getElementById('countdownWrap').style.display = '';
+    tickCountdown();
+    if (!initCountdown._timer) initCountdown._timer = setInterval(tickCountdown, 1000);
+  }
+  function setFlip(id, val) {
+    const el = document.getElementById(id);
+    if (el.textContent === val) return;
+    el.textContent = val;
+    el.classList.remove('cd-flip');
+    void el.offsetWidth;
+    el.classList.add('cd-flip');
+  }
+  function tickCountdown() {
+    if (!cdTarget) return;
+    const diff = cdTarget - Date.now();
+    if (diff <= 0) {
+      document.getElementById('countdown').innerHTML = '⚔️ THE TOURNAMENT IS LIVE — BRAWL ON!';
+      document.getElementById('countdown').classList.add('done');
+      document.getElementById('cdTitle').textContent = 'It\u2019s Happening';
+      clearInterval(initCountdown._timer);
+      initCountdown._timer = null;
+      return;
+    }
+    const s = Math.floor(diff / 1000);
+    setFlip('cdDays', String(Math.floor(s / 86400)));
+    setFlip('cdHours', String(Math.floor((s % 86400) / 3600)).padStart(2, '0'));
+    setFlip('cdMins', String(Math.floor((s % 3600) / 60)).padStart(2, '0'));
+    setFlip('cdSecs', String(s % 60).padStart(2, '0'));
+  }
+  navRingInit();
+  crtInit();
+  odometerInit();
+  refreshStatus();
+
+  // ----- #12 match spotlight: closest-Elo upcoming match -----
+  (async function spotlight() {
+    try {
+      const [bData, s] = await Promise.all([
+        fetch('/api/bracket').then((r) => r.json()),
+        fetchStatus(),
+      ]);
+      const b = bData.bracket;
+      const teams = bData.teams || [];
+      if (!b || !s.registrationOpen) return; // spotlight only matters while signing up
+      const ready = [...b.winners.rounds, ...b.losers.rounds]
+        .flatMap((r) => r.matches)
+        .filter((m) => m && !m.isBye && m.ready && !m.winner &&
+          m.slots[0].teamId !== null && m.slots[1].teamId !== null);
+      if (!ready.length) return;
+      const name = (id) => {
+        const t = teams.find((x) => x.id === id);
+        return t ? `${t.p1.username} / ${t.p2.username}` : `Team ${id}`;
+      };
+      const avg = (id) => {
+        const t = teams.find((x) => x.id === id);
+        return t ? Math.round((t.p1.elo + t.p2.elo) / 2) : 0;
+      };
+      ready.sort((a, z) =>
+        Math.abs(avg(a.slots[0].teamId) - avg(a.slots[1].teamId)) -
+        Math.abs(avg(z.slots[0].teamId) - avg(z.slots[1].teamId)));
+      const m = ready[0];
+      const n1 = name(m.slots[0].teamId), n2 = name(m.slots[1].teamId);
+      const c1 = teamColors(n1), c2 = teamColors(n2);
+      const box = document.getElementById('spotlightBox');
+      const tag = m.id.startsWith('W') ? 'Winners Bracket' : 'Losers Bracket';
+      box.innerHTML = `
+        <div class="spot-kicker">⚡ Upcoming Spotlight</div>
+        <div class="glass spotlight-card">
+          <div class="spot-side">
+            <div class="spot-name">${n1}</div>
+            <div class="spot-elo">Avg Elo ${avg(m.slots[0].teamId)}</div>
+            <div class="vs-banner" style="background:${c1.grad};margin-top:10px;"></div>
+          </div>
+          <div class="spot-vs">VS</div>
+          <div class="spot-side">
+            <div class="spot-name">${n2}</div>
+            <div class="spot-elo">Avg Elo ${avg(m.slots[1].teamId)}</div>
+            <div class="vs-banner" style="background:${c2.grad};margin-top:10px;"></div>
+          </div>
+          <div class="spot-meta">${tag} · ${m.id} · Best of ${m.bestOf || 1}</div>
+        </div>`;
+      box.style.display = '';
+    } catch (e) { /* offline */ }
+  })();
+
+  // animated counters
+  const counters = document.querySelectorAll('[data-count]');
+  const cio = new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (!en.isIntersecting) return;
+      const el = en.target;
+      cio.unobserve(el);
+      const target = Number(el.dataset.count) || 0;
+      const t0 = performance.now(), dur = 1200;
+      (function step(t) {
+        const p = Math.min(1, (t - t0) / dur);
+        el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(step);
+      })(t0);
+    });
+  }, { threshold: 0.4 });
+  counters.forEach((el) => cio.observe(el));
+</script>
+</body>
+</html>

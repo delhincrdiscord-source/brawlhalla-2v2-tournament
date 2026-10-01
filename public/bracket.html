@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bracket — Brawlhalla 2v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
+</head>
+<body>
+<div class="aurora"></div>
+<canvas id="stars"></canvas>
+<canvas id="embers"></canvas>
+<div id="confettiRoot"></div>
+
+<nav>
+  <a class="nav-logo" href="/"><span id="navCrest"></span> BRAWLHALLA <span class="grad-text">2v2</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/register">Register</a>
+    <a href="/bracket" class="btn small">Bracket</a>
+  </div>
+</nav>
+
+<section class="page-head wrap">
+  <h1 class="h-display"><span class="grad-text">Tournament</span> Bracket</h1>
+  <p style="color:var(--ink-dim); margin-top:12px;">Double elimination — winners, losers, and the grand final. Click a team for its match history.</p>
+</section>
+
+<section class="section wrap" style="padding-top:0;">
+  <div id="myMatchBar"></div>
+  <div id="bracketRoot"></div>
+</section>
+
+<!-- team profile popup -->
+<div id="teamModal" style="display:none; position:fixed; inset:0; z-index:90; background:rgba(4,4,14,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:20px;">
+  <div class="glass" id="teamModalCard" style="max-width:520px; width:100%; max-height:80vh; overflow-y:auto; padding:30px; position:relative;">
+    <button id="teamModalClose" style="position:absolute; top:14px; right:16px; background:none; border:none; color:var(--ink-dim); font-size:1.4rem; cursor:pointer;">×</button>
+    <div id="teamModalBody"></div>
+  </div>
+</div>
+
+<div class="vs-overlay" id="vsOverlay">
+  <div class="vs-stage">
+    <div class="vs-side" id="vsLeft"></div>
+    <div class="vs-mid">VS</div>
+    <div class="vs-side right" id="vsRight"></div>
+  </div>
+  <div class="vs-hint">Click anywhere to close</div>
+</div>
+<div class="vs-flash" id="vsFlash"></div>
+
+<footer>Results update live as the TO reports matches</footer>
+<div id="toast"></div>
+
+<script src="/js/particles.js"></script>
+<script src="/js/common.js?v=4"></script>
+<script>
+  document.getElementById('navCrest').innerHTML = crestSVG('sigil');
+  markActiveNav();
+
+  const root = document.getElementById('bracketRoot');
+  const teamName = new Map();
+  const eliminatedTeams = new Set();
+  let isAdmin = false;
+
+  // ---------- my-match quick lookup bar ----------
+  async function initMyMatch() {
+    try {
+      const saved = localStorage.getItem('myTeamQuery');
+      if (!saved) return;
+      await renderMyMatch(saved);
+    } catch {}
+  }
+  async function renderMyMatch(q) {
+    const bar = document.getElementById('myMatchBar');
+    const res = await fetch('/api/my-match?q=' + encodeURIComponent(q));
+    const data = await res.json();
+    if (!res.ok) { bar.innerHTML = ''; return; }
+    const { team, info } = data;
+    const tname = `${team.p1.username} / ${team.p2.username}`;
+    let status;
+    if (info.champion) status = `<span class="mm-champ">🏆 CHAMPION</span>`;
+    else if (info.eliminated) status = `<span class="mm-elim">ELIMINATED</span>`;
+    else if (info.next) {
+      const opp = typeof info.next.opponent === 'number'
+        ? (teamName.get(info.next.opponent) || 'Team ' + info.next.opponent)
+        : 'TBD';
+      status = `<span class="mm-next">Next: <b>${info.next.round}</b> vs <b>${opp}</b> · Bo${info.next.bestOf}</span>`;
+    } else status = `<span class="mm-next">Waiting for bracket</span>`;
+    bar.innerHTML = `<div class="glass mm-bar">🔎 <b>${tname}</b> ${status}
+      <button class="btn ghost small" id="mmClear" style="margin-left:auto;">Not you?</button></div>`;
+    document.getElementById('mmClear').addEventListener('click', () => {
+      localStorage.removeItem('myTeamQuery');
+      bar.innerHTML = '';
+      showLookupPrompt();
+    });
+  }
+  function showLookupPrompt() {
+    document.getElementById('myMatchBar').innerHTML = `<div class="glass mm-bar">
+      🎮 <b>Find my match:</b> <input id="mmQuery" placeholder="your username or Discord ID" style="max-width:260px;">
+      <button class="btn cyan small" id="mmGo">Find</button></div>`;
+    const go = () => {
+      const q = document.getElementById('mmQuery').value.trim();
+      if (!q) return;
+      localStorage.setItem('myTeamQuery', q);
+      renderMyMatch(q);
+    };
+    document.getElementById('mmGo').addEventListener('click', go);
+    document.getElementById('mmQuery').addEventListener('keydown', (e) => e.key === 'Enter' && go());
+  }
+  initMyMatch();
+
+  // ---------- team profile modal ----------
+  async function openTeamProfile(teamId) {
+    const modal = document.getElementById('teamModal');
+    const body = document.getElementById('teamModalBody');
+    body.innerHTML = '<p style="color:var(--ink-dim);text-align:center;">Loading…</p>';
+    modal.style.display = 'flex';
+    const res = await fetch('/api/teams/' + teamId + '/bracket');
+    if (!res.ok) { body.innerHTML = '<p>Team not found.</p>'; return; }
+    const { team, info } = await res.json();
+    const fmtPlayer = (p) => `<div class="tp-player"><b>${p.username}</b>
+      <span style="color:var(--ink-dim);">${p.discordId}</span>
+      <span class="tp-elo">Elo ${p.elo} · Peak ${p.peak}</span></div>`;
+    const rows = info.history.map((h) => {
+      const opp = typeof h.opponent === 'number'
+        ? (teamName.get(h.opponent) || 'Team ' + h.opponent) : (h.opponent || '—');
+      return `<tr><td>${h.round}</td><td>${opp}</td>
+        <td class="${h.won ? 'tp-won' : 'tp-lost'}">${h.won ? 'W' : 'L'} ${h.scores[0]}–${h.scores[1]}</td>
+        <td style="color:var(--ink-dim);">Bo${h.bestOf}</td></tr>`;
+    }).join('');
+    let nextHtml = '';
+    if (info.next) {
+      const opp = typeof info.next.opponent === 'number'
+        ? (teamName.get(info.next.opponent) || 'Team ' + info.next.opponent)
+        : (info.next.opponent || 'TBD');
+      nextHtml = `<div class="tp-next">⚔️ Next: <b>${info.next.round}</b> vs <b>${opp}</b> (Bo${info.next.bestOf})</div>`;
+    }
+    body.innerHTML = `
+      <h2 class="h-display grad-text" style="font-size:1.3rem;">${teamName.get(team.id) || ''}</h2>
+      ${info.champion ? '<div class="tp-champ">🏆 VALHALLA CHAMPION</div>' : ''}
+      ${info.eliminated ? '<div class="tp-elim-badge">ELIMINATED</div>' : ''}
+      ${nextHtml}
+      <div style="display:flex; gap:14px; margin:18px 0;">${fmtPlayer(team.p1)}${fmtPlayer(team.p2)}</div>
+      <h4 style="font-family:var(--font-display); letter-spacing:2px; font-size:0.8rem; text-transform:uppercase; color:var(--ink-dim);">Match History</h4>
+      ${info.history.length
+        ? `<table class="teams-table" style="width:100%;"><thead><tr><th>Round</th><th>Opponent</th><th>Result</th><th>Format</th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<p style="color:var(--ink-dim);">No matches played yet.</p>'}`;
+  }
+  document.getElementById('teamModalClose').addEventListener('click', () => {
+    document.getElementById('teamModal').style.display = 'none';
+  });
+  document.getElementById('teamModal').addEventListener('click', (e) => {
+    if (e.target.id === 'teamModal') e.target.style.display = 'none';
+  });
+
+  // ---------- rendering ----------
+  function slotLabel(s, m, isAdminView) {
+    if (s.teamId === null) {
+      if (m.isBye && s.bye) return `<div class="slot"><span>BYE</span></div>`;
+      return `<div class="slot"><span>TBD</span></div>`;
+    }
+    const name = teamName.get(s.teamId) || `Team ${s.teamId}`;
+    const banner = teamBanner(name);
+    const isWinner = m.winner === s.slotId;
+    const isLoser = m.winner && m.winner !== s.slotId;
+    const seed = s.seed ? `<span class="seed">#${s.seed}</span>` : '';
+    const score = m.winner
+      ? `<span class="score ${isWinner ? 'sw' : 'sl'}">${m.scores[m.slots.indexOf(s)]}</span>`
+      : '';
+    const elim = eliminatedTeams.has(s.teamId) ? '<span class="elim-stamp">ELIMINATED</span>' : '';
+    let report = '';
+    if (isAdminView && m.ready && !m.winner && !m.isBye) {
+      const myIdx = m.slots.indexOf(s);
+      report = `<span class="score-input"><input type="number" min="0" max="9" value="0" data-score="${m.id}:${myIdx}"><button class="report" data-match="${m.id}" data-winner="${s.slotId}">Win</button></span>`;
+    }
+    return `<div class="slot ${isWinner ? 'win' : ''} ${isLoser ? 'lose' : ''} ${elim ? 'is-elim' : ''}">
+      <span class="team-link" data-team="${s.teamId}" title="View match history">${banner}${name}</span>${seed}${score}${report}${elim}</div>`;
+  }
+
+  function matchCard(m, tag, isAdminView) {
+    const state = m.winner ? 'done' : m.ready ? 'ready' : '';
+    const bo = m.bestOf > 1 ? `<span class="bo">Bo${m.bestOf}</span>` : '';
+    const undo = isAdminView && m.winner && !m.isBye
+      ? `<button class="undo-btn" data-undo="${m.id}" title="Undo this result">↺</button>` : '';
+    return `<div class="match ${state}" data-mid="${m.id}">
+      <div class="tag"><span>${tag} ${bo}</span><span>${undo}${m.winner ? 'FINAL' : m.ready ? 'READY' : 'PENDING'}</span></div>
+      ${slotLabel(m.slots[0], m, isAdminView)}
+      ${slotLabel(m.slots[1], m, isAdminView)}
+    </div>`;
+  }
+
+  function render(data, adminView) {
+    const { bracket } = data;
+    (data.teams || []).forEach((t) => teamName.set(t.id, `${t.p1.username} / ${t.p2.username}`));
+    eliminatedTeams.clear();
+    (data.eliminated || []).forEach((id) => eliminatedTeams.add(id));
+    if (!bracket) {
+      root.innerHTML = `<div class="glass" style="padding:60px 30px;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:14px;">🗺️</div>
+        <h2 class="h-display grad-text" style="font-size:1.5rem;">No Bracket Yet</h2>
+        <p style="color:var(--ink-dim);margin-top:12px;">The bracket appears here once the TO generates it after registration closes.</p>
+      </div>`;
+      return;
+    }
+    let html = '<div id="bracketWrap" style="position:relative;"><svg id="bracketLines" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></svg><div class="bracket-cols">';
+    bracket.winners.rounds.forEach((r, i) => {
+      html += `<div class="bracket-col"><h4>${i === 0 ? 'Winners R1' : i === bracket.winners.rounds.length - 1 ? 'Winners Final' : 'Winners R' + (i + 1)}</h4>`;
+      r.matches.forEach((m) => { html += matchCard(m, m.id, adminView); });
+      html += '</div>';
+    });
+    bracket.losers.rounds.forEach((r, i) => {
+      html += `<div class="bracket-col"><h4>Losers R${i + 1}</h4>`;
+      r.matches.forEach((m) => { html += matchCard(m, m.id, adminView); });
+      html += '</div>';
+    });
+    html += `<div class="bracket-col"><h4>Grand Final</h4>${matchCard(bracket.grandFinal, 'GF', adminView)}`;
+    if (bracket.grandFinalReset) html += matchCard(bracket.grandFinalReset, 'GF RESET', adminView);
+    html += '</div></div>';
+    let championCrowned = false;
+    if (bracket.champion) {
+      const champSlot = (bracket.grandFinalReset || bracket.grandFinal).slots.find((s) => s.slotId === bracket.champion);
+      const champ = teamName.get(champSlot ? champSlot.teamId : null);
+      html += `<div class="gf-banner champion-banner" id="championBanner">🏆 <span class="champ-word">CHAMPION</span> — ${champ || 'TBD'}</div>`;
+      championCrowned = !!champ;
+    } else if (bracket.bracketResetRequired) {
+      html += `<div class="gf-banner">⚡ Bracket Reset — one more set decides it all</div>`;
+    }
+    root.innerHTML = html;
+
+    if (adminView) bindAdminHandlers();
+    drawBracketLines();
+    bindVsSplash();
+    root.querySelectorAll('.team-link').forEach((el) =>
+      el.addEventListener('click', () => openTeamProfile(Number(el.dataset.team)))
+    );
+    if (championCrowned && !sessionStorage.getItem('celebrated')) celebrate();
+  }
+
+  function bindAdminHandlers() {
+    root.querySelectorAll('.report').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const matchId = btn.dataset.match;
+        const scores = [0, 0];
+        root.querySelectorAll(`[data-score^="${matchId}:"]`).forEach((inp) => {
+          const idx = Number(inp.dataset.score.split(':')[1]);
+          scores[idx] = Math.max(0, Math.min(9, Number(inp.value) || 0));
+        });
+        const res = await fetch('/api/admin/report-match', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ matchId, winner: btn.dataset.winner, scores }),
+        });
+        if (res.ok) { load(); toast('Match reported'); }
+        else { const d = await res.json(); toast(d.message || 'Failed', true); }
+      });
+    });
+    root.querySelectorAll('[data-undo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Undo this result?')) return;
+        const res = await fetch('/api/admin/undo-match', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ matchId: btn.dataset.undo }),
+        });
+        if (res.ok) { load(); toast('Result undone'); }
+        else { const d = await res.json(); toast(d.message || 'Failed', true); }
+      });
+    });
+  }
+
+
+  // ---------- animated bracket connector lines ----------
+  let lineRaf = null;
+  function drawBracketLines() {
+    const wrap = document.getElementById('bracketWrap');
+    const svg = document.getElementById('bracketLines');
+    if (!wrap || !svg) return;
+    if (lineRaf) { cancelAnimationFrame(lineRaf); lineRaf = null; }
+    const wrapRect = wrap.getBoundingClientRect();
+    svg.setAttribute('viewBox', `0 0 ${Math.round(wrapRect.width)} ${Math.round(wrapRect.height)}`);
+    const byId = {};
+    root.querySelectorAll('[data-mid]').forEach((el) => { byId[el.dataset.mid] = el; });
+    const { bracket } = currentData || {};
+    if (!bracket) { svg.innerHTML = ''; return; }
+    const all = [...bracket.winners.rounds, ...bracket.losers.rounds].flatMap((r) => r.matches);
+    all.push(bracket.grandFinal);
+    if (bracket.grandFinalReset) all.push(bracket.grandFinalReset);
+    const matchById = {};
+    all.forEach((m) => { if (m) matchById[m.id] = m; });
+    let paths = '';
+    const pulses = [];
+    for (const m of all) {
+      const targetEl = byId[m.id];
+      if (!targetEl) continue;
+      for (const slot of m.slots) {
+        if (!slot.from) continue;
+        const srcEl = byId[slot.from];
+        if (!srcEl) continue;
+        const a = srcEl.getBoundingClientRect();
+        const b = targetEl.getBoundingClientRect();
+        const x1 = a.right - wrapRect.left, y1 = a.top + a.height / 2 - wrapRect.top;
+        const x2 = b.left - wrapRect.left, y2 = b.top + b.height / 2 - wrapRect.top;
+        if (x2 < x1 - 10) continue; // wrong direction (LB wraps); skip straight lines
+        const midX = (x1 + x2) / 2;
+        const d = `M${x1.toFixed(1)} ${y1.toFixed(1)} C${midX.toFixed(1)} ${y1.toFixed(1)}, ${midX.toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+        const src = matchById[slot.from];
+        const decided = src && src.winner && !src.isBye;
+        paths += `<path d="${d}" fill="none" stroke="${decided ? 'rgba(255,194,75,0.7)' : 'rgba(255,255,255,0.13)'}" stroke-width="${decided ? 2 : 1.2}"/>`;
+        if (decided) pulses.push(d);
+      }
+    }
+    const defs = `<defs><filter id="pulseGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="2.2"/></filter></defs>`;
+    svg.innerHTML = defs + paths;
+    if (pulses.length && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const t0 = performance.now();
+      const dots = pulses.map((d, i) => ({ d, off: (i % 7) * 0.14 }));
+      const anim = (t) => {
+        const el = document.getElementById('bracketLines');
+        if (!el) return;
+        const time = ((t - t0) / 2800) % 1;
+        let dotsSvg = '';
+        dots.forEach((p) => {
+          const prog = (time + p.off) % 1;
+          const pt = pointAt(p.d, prog);
+          if (!pt) return;
+          const op = Math.max(0, 1 - Math.abs(0.5 - prog) * 1.6);
+          dotsSvg += `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="2.6" fill="#ffc24b" opacity="${op.toFixed(2)}" filter="url(#pulseGlow)"/>`;
+        });
+        el.innerHTML = defs + paths + dotsSvg;
+        lineRaf = requestAnimationFrame(anim);
+      };
+      lineRaf = requestAnimationFrame(anim);
+    }
+  }
+  function pointAt(d, t) {
+    const m = d.match(/M([\d.-]+) ([\d.-]+) C([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+), ([\d.-]+) ([\d.-]+)/);
+    if (!m) return null;
+    const [x1, y1, cx1, cy1, cx2, cy2, x2, y2] = m.slice(1).map(Number);
+    const u = 1 - t;
+    return {
+      x: u*u*u*x1 + 3*u*u*t*cx1 + 3*u*t*t*cx2 + t*t*t*x2,
+      y: u*u*u*y1 + 3*u*u*t*cy1 + 3*u*t*t*cy2 + t*t*t*y2,
+    };
+  }
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(drawBracketLines, 150);
+  });
+
+  // ---------- VS matchup splash ----------
+  function bindVsSplash() {
+    root.querySelectorAll('.match').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('input, button, .team-link')) return;
+        const { bracket } = currentData || {};
+        if (!bracket) return;
+        const all = [...bracket.winners.rounds, ...bracket.losers.rounds].flatMap((r) => r.matches);
+        all.push(bracket.grandFinal);
+        if (bracket.grandFinalReset) all.push(bracket.grandFinalReset);
+        const m = all.find((x) => x && x.id === card.dataset.mid);
+        if (!m) return;
+        const s0 = m.slots[0], s1 = m.slots[1];
+        if (s0.teamId === null || s1.teamId === null) return;
+        showVs(teamName.get(s0.teamId) || `Team ${s0.teamId}`,
+               teamName.get(s1.teamId) || `Team ${s1.teamId}`,
+               m.bestOf || 1);
+      });
+    });
+  }
+  function showVs(n1, n2, bo) {
+    const ov = document.getElementById('vsOverlay');
+    const fl = document.getElementById('vsFlash');
+    document.getElementById('vsLeft').innerHTML =
+      `<div class="vs-name">${n1}</div><div class="vs-banner" style="background:${teamColors(n1).grad}"></div>`;
+    document.getElementById('vsRight').innerHTML =
+      `<div class="vs-name">${n2}</div><div class="vs-banner" style="background:${teamColors(n2).grad}"></div>`;
+    ov.querySelector('.vs-hint').textContent = `BEST OF ${bo} · Click anywhere to close`;
+    fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
+    ov.classList.add('show');
+    setTimeout(() => fl.classList.remove('go'), 600);
+  }
+  document.getElementById('vsOverlay').addEventListener('click', () => {
+    document.getElementById('vsOverlay').classList.remove('show');
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') document.getElementById('vsOverlay').classList.remove('show');
+  });
+
+  // ---------- champion celebration ----------
+  function celebrate() {
+    sessionStorage.setItem('celebrated', '1');
+    const banner = document.getElementById('championBanner');
+    if (banner) banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const rootEl = document.getElementById('confettiRoot');
+    if (!rootEl) return;
+    const colors = ['#ffc24b', '#35e6ff', '#ff4d6d', '#b98cff', '#ffffff'];
+    const W = window.innerWidth;
+    for (let i = 0; i < 140; i++) {
+      const p = document.createElement('div');
+      p.className = 'confetti';
+      p.style.left = Math.random() * W + 'px';
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = Math.random() * 2.5 + 's';
+      p.style.animationDuration = 2.6 + Math.random() * 2.4 + 's';
+      const size = 6 + Math.random() * 8;
+      p.style.width = size + 'px';
+      p.style.height = size * (Math.random() > 0.5 ? 1 : 0.4) + 'px';
+      rootEl.appendChild(p);
+      setTimeout(() => p.remove(), 6500);
+    }
+  }
+
+  let currentData = null;
+  async function load() {
+    const [data, me] = await Promise.all([
+      fetch('/api/bracket').then((r) => r.json()),
+      fetch('/api/admin/me').then((r) => r.json()).catch(() => ({ admin: false })),
+    ]);
+    isAdmin = !!me.admin;
+    currentData = data;
+    render(data, isAdmin);
+  }
+  load();
+  setInterval(load, 15000); // light live refresh
+</script>
+</body>
+</html>

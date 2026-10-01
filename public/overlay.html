@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Overlay — Brawlhalla 2v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Standalone overlay styles — independent of site CSS so the page can be
+     used as an OBS browser source with a transparent background. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: transparent;
+    font-family: 'Rajdhani', sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+  .ov-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 14px;
+  }
+  .ov-match {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+  }
+  .ov-side {
+    flex: 1;
+    background: linear-gradient(160deg, rgba(16,16,38,0.94), rgba(10,10,26,0.94));
+    border: 1px solid rgba(255,255,255,0.09);
+    padding: 16px 18px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .ov-side.winner {
+    border-color: rgba(255,194,75,0.65);
+    background: linear-gradient(160deg, rgba(46,36,10,0.95), rgba(24,18,6,0.95));
+    box-shadow: inset 0 0 34px rgba(255,194,75,0.12);
+  }
+  .ov-team {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ov-sub { color: rgba(255,255,255,0.55); font-size: 0.78rem; letter-spacing: 1.5px; text-transform: uppercase; }
+  .ov-mid {
+    width: 92px;
+    background: linear-gradient(180deg, #1b1440, #0e0a24);
+    border: 1px solid rgba(53,230,255,0.35);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 10px 6px;
+  }
+  .ov-score {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.7rem;
+    line-height: 1;
+  }
+  .ov-score .sep { color: rgba(255,255,255,0.35); font-size: 1.1rem; margin: 0 4px; }
+  .ov-bo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: #ff5ec4;
+  }
+  .ov-round {
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #35e6ff;
+    text-shadow: 0 0 18px rgba(53,230,255,0.6);
+  }
+  .ov-tag {
+    display: inline-block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 2px;
+    padding: 3px 12px;
+    border-radius: 20px;
+    margin-top: 2px;
+  }
+  .ov-tag.live { color: #ffc24b; border: 1px solid rgba(255,194,75,0.55); background: rgba(255,194,75,0.08); }
+  .ov-tag.final { color: #35e6ff; border: 1px solid rgba(53,230,255,0.5); background: rgba(53,230,255,0.07); }
+  .ov-empty {
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.5);
+    padding: 26px;
+    background: rgba(10,10,26,0.75);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+  }
+  .ov-champ {
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    color: #ffc24b;
+    text-shadow: 0 0 26px rgba(255,194,75,0.7);
+    padding: 16px;
+  }
+  .ov-players { display: flex; gap: 6px; font-size: 0.8rem; color: rgba(255,255,255,0.75); }
+  .ov-players span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+</head>
+<body>
+<div class="ov-wrap" id="ovWrap">
+  <div class="ov-empty">WAITING FOR MATCH DATA…</div>
+</div>
+
+<script>
+  // Overlay picks the featured match: ?match=<ID> pins a specific match,
+  // otherwise the first READY match is featured (falls back to the GF).
+  const params = new URLSearchParams(location.search);
+  const pinned = params.get('match');
+
+  function teamLabel(teams, slot) {
+    if (!slot || slot.teamId === null) return { name: 'TBD', players: '' };
+    const t = teams.find((x) => x.id === slot.teamId);
+    return t
+      ? { name: `${t.p1.username} / ${t.p2.username}`, players: '' }
+      : { name: 'Team ' + slot.teamId, players: '' };
+  }
+
+  function findFeatured(bracket) {
+    const all = [];
+    for (const r of bracket.winners.rounds) all.push(...r.matches);
+    for (const r of bracket.losers.rounds) all.push(...r.matches);
+    all.push(bracket.grandFinal);
+    if (bracket.grandFinalReset) all.push(bracket.grandFinalReset);
+    if (pinned) {
+      const m = all.find((x) => x.id === pinned);
+      return m || null;
+    }
+    return all.find((m) => m.ready && !m.winner && !m.isBye) ||
+           all.reverse().find((m) => m.winner && !m.isBye) || null;
+  }
+
+  function roundName(m) {
+    if (m.id === 'GF') return 'GRAND FINAL';
+    if (m.id === 'GFR') return 'BRACKET RESET';
+    const [r, mi] = m.id.slice(1).split('M');
+    if (m.id.startsWith('W'))
+      return bracket && bracket.winners.rounds.length &&
+             Number(r) === bracket.winners.rounds.length ? 'WINNERS FINAL'
+        : Number(r) === bracket.winners.rounds.length - 1 ? 'WINNERS SEMIS'
+        : 'WINNERS R' + r;
+    return Number(r) === 1 ? 'LOSERS R1' : 'LOSERS R' + r;
+  }
+
+  let bracket = null;
+  function render(data) {
+    const wrap = document.getElementById('ovWrap');
+    const { bracket: b, teams } = data;
+    bracket = b;
+    if (!b) {
+      wrap.innerHTML = '<div class="ov-empty">NO BRACKET YET</div>';
+      return;
+    }
+    if (b.champion) {
+      const slot = (b.grandFinalReset || b.grandFinal).slots.find((s) => s.slotId === b.champion);
+      const t = teams.find((x) => x.id === (slot && slot.teamId));
+      wrap.innerHTML = `<div class="ov-champ">🏆 CHAMPION — ${t ? t.p1.username + ' / ' + t.p2.username : 'TBD'}</div>`;
+      return;
+    }
+    const m = findFeatured(b);
+    if (!m) {
+      wrap.innerHTML = '<div class="ov-empty">NO ACTIVE MATCH</div>';
+      return;
+    }
+    const a = teamLabel(teams, m.slots[0]);
+    const bb = teamLabel(teams, m.slots[1]);
+    const decided = !!m.winner;
+    const winIdx = decided ? m.slots.findIndex((s) => s.slotId === m.winner) : -1;
+    const scoreHtml = decided
+      ? `<span class="${winIdx === 0 ? 'sa' : 'sb'}" style="color:${winIdx === 0 ? '#ffc24b' : 'rgba(255,255,255,0.55)'}">${m.scores[0]}</span><span class="sep">–</span><span style="color:${winIdx === 1 ? '#ffc24b' : 'rgba(255,255,255,0.55)'}">${m.scores[1]}</span>`
+      : '<span style="color:#35e6ff; font-size:1rem; letter-spacing:3px;">VS</span>';
+    wrap.innerHTML = `
+      <div class="ov-round">${roundName(m)}</div>
+      <div class="ov-match">
+        <div class="ov-side ${winIdx === 0 ? 'winner' : ''}">
+          <div class="ov-team">${a.name}</div>
+        </div>
+        <div class="ov-mid">
+          <div class="ov-score">${scoreHtml}</div>
+          <div class="ov-bo">BO${m.bestOf}</div>
+          <div class="ov-tag ${decided ? 'final' : 'live'}">${decided ? 'FINAL' : 'LIVE'}</div>
+        </div>
+        <div class="ov-side ${winIdx === 1 ? 'winner' : ''}">
+          <div class="ov-team">${bb.name}</div>
+        </div>
+      </div>`;
+  }
+
+  async function load() {
+    try {
+      const data = await fetch('/api/bracket').then((r) => r.json());
+      render(data);
+    } catch {}
+  }
+  load();
+  setInterval(load, 5000);
+</script>
+</body>
+</html>

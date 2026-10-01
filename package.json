@@ -1,0 +1,19 @@
+{
+  "name": "brawlhalla-2v2-tournament",
+  "version": "1.0.0",
+  "description": "2v2 double-elimination tournament site for Brawlhalla community events",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server-entry.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

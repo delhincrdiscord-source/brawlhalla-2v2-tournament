@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — Brawlhalla 2v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
+</head>
+<body>
+<div class="aurora"></div>
+<canvas id="stars"></canvas>
+<canvas id="embers"></canvas>
+
+<nav>
+  <a class="nav-logo" href="/"><span id="navCrest"></span> BRAWLHALLA <span class="grad-text">2v2</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/bracket">Bracket</a>
+    <a href="/register" class="btn small">Register</a>
+  </div>
+</nav>
+
+<section class="page-head wrap">
+  <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">LOADING</span></div>
+  <h1 class="h-display"><span class="grad-text">Register</span> Your Duo</h1>
+  <p style="color:var(--ink-dim); margin-top:12px;">One player signs up for the team. Duplicates by Discord ID or in-game name are blocked automatically.</p>
+</section>
+
+<section class="section wrap" id="myMatchSection" style="padding-top: 0;">
+  <div class="simple-card" style="max-width:640px; margin:0 auto;">
+    <h3 style="font-family:var(--font-display); letter-spacing:2px; font-size:0.95rem; text-transform:uppercase; margin-bottom:8px;">🎮 Find My Next Match</h3>
+    <p style="color:var(--ink-dim); font-size:0.9rem; margin:0 0 16px;">Enter your username or Discord ID to see who you play next, the format, and your full match history.</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <input id="myMatchQuery" placeholder="username or Discord ID" style="flex:1; min-width:220px;">
+      <button class="btn cyan" id="myMatchGo">Find</button>
+    </div>
+    <div id="myMatchResult" style="margin-top:18px;"></div>
+  </div>
+</section>
+
+<script>
+  document.getElementById('myMatchGo').addEventListener('click', lookupMatch);
+  document.getElementById('myMatchQuery').addEventListener('keydown', (e) => e.key === 'Enter' && lookupMatch());
+  async function lookupMatch() {
+    const q = document.getElementById('myMatchQuery').value.trim();
+    const out = document.getElementById('myMatchResult');
+    if (!q) return;
+    const res = await fetch('/api/my-match?q=' + encodeURIComponent(q));
+    const data = await res.json();
+    if (!res.ok) {
+      out.innerHTML = `<div style="color:#ff8fa5;">${data.message || 'Not found.'}</div>`;
+      return;
+    }
+    const { team, info } = data;
+    const nm = (id) => 'Team ' + id;
+    let status;
+    if (info.champion) status = '<span style="color:var(--gold); font-family:var(--font-display);">🏆 CHAMPION</span>';
+    else if (info.eliminated) status = '<span style="color:#ff4d6d; font-family:var(--font-display);">ELIMINATED</span>';
+    else if (info.next) status = `Next: <b style="color:var(--cyan);">${info.next.round}</b> vs <b style="color:var(--cyan);">${typeof info.next.opponent === 'number' ? nm(info.next.opponent) : 'TBD'}</b> · Bo${info.next.bestOf}`;
+    else status = '<span style="color:var(--ink-dim);">Waiting for bracket</span>';
+    const hist = info.history.map((h) =>
+      `<div style="display:flex; gap:10px; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+        <span style="color:var(--ink-dim); min-width:130px;">${h.round}</span>
+        <span style="flex:1;">${typeof h.opponent === 'number' ? nm(h.opponent) : (h.opponent || '—')}</span>
+        <span class="${h.won ? 'tp-won' : 'tp-lost'}">${h.won ? 'W' : 'L'} ${h.scores[0]}–${h.scores[1]}</span>
+      </div>`).join('');
+    out.innerHTML = `<div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:14px;">
+      <b>${team.p1.username} / ${team.p2.username}</b> — ${status}
+      ${info.history.length ? '<div style="margin-top:12px; color:var(--ink-dim); font-size:0.85rem;">MATCH HISTORY</div>' + hist : ''}
+      ${!info.history.length && !info.next ? '<div style="color:var(--ink-dim); margin-top:8px;">No matches yet.</div>' : ''}
+    </div>`;
+  }
+</script>
+
+<section class="section wrap" style="padding-top: 10px;">
+  <div class="form-shell" id="formShell">
+    <form id="regForm" novalidate>
+      <div class="simple-grid">
+        <fieldset class="simple-card p1">
+          <legend>Player 1</legend>
+          <div class="field">
+            <label for="p1_discordId">Discord User ID</label>
+            <input id="p1_discordId" name="p1_discordId" placeholder="e.g. 123456789012345678" inputmode="numeric" autocomplete="off">
+            <div class="hint">Right-click your avatar in Discord → “Copy User ID” (enable Developer Mode).</div>
+          </div>
+          <div class="field">
+            <label for="p1_username">In-Game Username</label>
+            <input id="p1_username" name="p1_username" placeholder="Your exact Brawlhalla name" autocomplete="off">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="p1_elo">Current 2v2 Elo</label>
+              <input id="p1_elo" name="p1_elo" type="number" min="0" placeholder="e.g. 1850">
+            </div>
+            <div class="field">
+              <label for="p1_peak">Peak 2v2 Elo</label>
+              <input id="p1_peak" name="p1_peak" type="number" min="0" placeholder="e.g. 2100">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="simple-card p2">
+          <legend>Player 2 — Teammate</legend>
+          <div class="field">
+            <label for="p2_discordId">Discord User ID</label>
+            <input id="p2_discordId" name="p2_discordId" placeholder="Your duo's Discord ID" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="p2_username">In-Game Username</label>
+            <input id="p2_username" name="p2_username" placeholder="Their exact Brawlhalla name" autocomplete="off">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="p2_elo">Current 2v2 Elo</label>
+              <input id="p2_elo" name="p2_elo" type="number" min="0" placeholder="e.g. 1780">
+            </div>
+            <div class="field">
+              <label for="p2_peak">Peak 2v2 Elo</label>
+              <input id="p2_peak" name="p2_peak" type="number" min="0" placeholder="e.g. 2050">
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="form-banner" id="banner"></div>
+      <div class="form-actions">
+        <button type="submit" class="btn" id="submitBtn">⚔️ Lock In Our Team</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<footer>Brawlers only · No smurfs · Bring your best duo</footer>
+<div id="toast"></div>
+
+<script src="/js/particles.js"></script>
+<script src="/js/common.js?v=4"></script>
+<script>
+  document.getElementById('navCrest').innerHTML = crestSVG('sigil');
+  markActiveNav();
+
+  const banner = document.getElementById('banner');
+  const form = document.getElementById('regForm');
+  const formShell = document.getElementById('formShell');
+  const pill = document.getElementById('statusPill');
+  const pillText = document.getElementById('statusText');
+
+  fetchStatus().then((s) => {
+    pill.classList.toggle('closed', !s.registrationOpen);
+    pillText.textContent = s.registrationOpen ? 'Registration Open' : 'Registration Closed';
+    if (!s.registrationOpen) {
+      formShell.innerHTML = `
+        <div class="glass" style="padding:60px 30px;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:14px;">🔒</div>
+          <h2 class="h-display grad-text" style="font-size:1.6rem;">Registration Is Closed</h2>
+          <p style="color:var(--ink-dim);margin-top:12px;">The bracket is locked in. Check the <a href="/bracket" style="color:var(--cyan)">bracket page</a> to follow the tournament.</p>
+        </div>`;
+    }
+  }).catch(() => {});
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    banner.className = 'form-banner';
+    const val = (id) => document.getElementById(id).value.trim();
+    const body = {
+      p1: {
+        discordId: val('p1_discordId'),
+        username: val('p1_username'),
+        elo: Number(val('p1_elo')),
+        peak: Number(val('p1_peak')),
+      },
+      p2: {
+        discordId: val('p2_discordId'),
+        username: val('p2_username'),
+        elo: Number(val('p2_elo')),
+        peak: Number(val('p2_peak')),
+      },
+    };
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Entering the arena…';
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        banner.className = 'form-banner success';
+        banner.textContent = '⚔️ Team registered! See you in the bracket.';
+        form.reset();
+        toast('Team registered successfully!');
+      } else {
+        banner.className = 'form-banner error';
+        banner.textContent = data.message || 'Registration failed. Check your inputs.';
+        toast(data.message || 'Registration failed', true);
+      }
+    } catch (err) {
+      banner.className = 'form-banner error';
+      banner.textContent = 'Network error — try again.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚔️ Lock In Our Team';
+    }
+  });
+</script>
+</body>
+</html>

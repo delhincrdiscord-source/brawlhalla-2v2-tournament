@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Brawlhalla 2v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=10">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 10 L82 20 V52 C82 68 68 80 50 88 C32 80 18 68 18 52 V20 Z' fill='%23131328' stroke='%23ffc24b' stroke-width='6'/><path d='M54 26 L38 52 L49 52 L42 74 L64 44 L52 44 L60 26 Z' fill='%23ffe14d'/></svg>">
+</head>
+<body>
+<div class="aurora"></div>
+<canvas id="stars"></canvas>
+<canvas id="embers"></canvas>
+
+<nav>
+  <a class="nav-logo" href="/"><span id="navCrest"></span> BRAWLHALLA <span class="grad-text">2v2</span></a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/bracket">Bracket</a>
+    <button class="btn small danger" id="logoutBtn" style="display:none;">Logout</button>
+  </div>
+</nav>
+
+<!-- login view -->
+<section class="page-head wrap" id="loginView">
+  <h1 class="h-display"><span class="grad-text">TO</span> Control Room</h1>
+  <div style="max-width:420px;margin:40px auto 0;" class="glass">
+    <div style="padding:34px 30px;">
+      <div class="field">
+        <label for="pw">Admin Password</label>
+        <input id="pw" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="form-actions"><button class="btn" id="loginBtn" style="width:100%;">Enter</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- dashboard view -->
+<section class="section wrap" id="dashView" style="display:none; padding-top:40px;">
+  <div class="section-title">
+    <div class="kicker">Tournament Operations</div>
+    <h1 class="h-display grad-text" style="font-size:2rem;">COMMAND CENTER</h1>
+  </div>
+
+  <div class="admin-grid">
+    <div class="admin-card glass glow-hover tilt3d">
+      <h3>🎯 Registration</h3>
+      <div class="toggle-row">
+        <div class="switch" id="regSwitch"></div>
+        <div class="switch-label" id="regLabel">—</div>
+      </div>
+      <p style="color:var(--ink-dim);font-size:0.85rem;margin-top:14px;">Closed registration locks the public form instantly.</p>
+    </div>
+
+    <div class="admin-card glass glow-hover tilt3d">
+      <h3>⚔️ Bracket</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn cyan" id="genBtn">Generate Bracket</button>
+        <a class="btn ghost" href="/bracket">View</a>
+        <a class="btn ghost" href="/api/admin/teams.csv" download>⬇ Export CSV</a>
+      </div>
+      <p style="color:var(--ink-dim);font-size:0.85rem;margin-top:14px;">Seeds teams by average current elo, handles byes. Regenerating wipes reported results.</p>
+    </div>
+
+    <div class="admin-card glass glow-hover tilt3d">
+      <h3>📝 Rules &amp; Prizes</h3>
+      <div class="field"><label>Rules (shown on home page)</label>
+        <textarea id="rulesText" rows="5" style="width:100%;background:#0c0c1d;border:1px solid rgba(255,255,255,0.14);border-radius:10px;color:var(--ink);padding:10px 12px;font-family:var(--font-body);font-size:0.9rem;resize:vertical;" placeholder="One rule per line…"></textarea></div>
+      <div class="field"><label>Prizes (shown on home page)</label>
+        <textarea id="prizesText" rows="3" style="width:100%;background:#0c0c1d;border:1px solid rgba(255,255,255,0.14);border-radius:10px;color:var(--ink);padding:10px 12px;font-family:var(--font-body);font-size:0.9rem;resize:vertical;" placeholder="1st place: …"></textarea></div>
+      <div class="form-actions"><button class="btn cyan" id="saveContentBtn" style="width:100%;">Save Content</button></div>
+      <p style="color:var(--ink-dim);font-size:0.85rem;margin-top:10px;">One entry per line. Saved text replaces the rules section on the home page.</p>
+    </div>
+
+    <div class="admin-card glass glow-hover tilt3d">
+      <h3>⏳ Tournament Countdown</h3>
+      <div class="field">
+        <label for="cdInput">Start Date &amp; Time</label>
+        <input id="cdInput" type="datetime-local">
+      </div>
+      <div class="cd-now" id="cdNow" style="color:var(--ink-dim);font-size:0.85rem;margin-bottom:12px;">No start time set</div>
+      <div class="form-actions" style="display:flex;gap:10px;">
+        <button class="btn cyan" id="cdSetBtn" style="flex:1;">Set Countdown</button>
+        <button class="btn ghost" id="cdClearBtn">Clear</button>
+      </div>
+      <p style="color:var(--ink-dim);font-size:0.85rem;margin-top:14px;">A live countdown ticks on the home page until the moment arrives.</p>
+    </div>
+
+    <div class="admin-card glass glow-hover tilt3d">
+      <h3>➕ Force Register</h3>
+      <div class="field"><label>Player 1 — Discord ID</label><input id="fp1d" placeholder="123456789012345678"></div>
+      <div class="field"><label>Player 1 — Username</label><input id="fp1u" placeholder="Name"></div>
+      <div class="field"><label>Player 1 — Current / Peak Elo</label>
+        <div style="display:flex;gap:10px;"><input id="fp1e" type="number" placeholder="Elo"><input id="fp1p" type="number" placeholder="Peak"></div>
+      </div>
+      <div class="field"><label>Player 2 — Discord ID</label><input id="fp2d" placeholder="234567890123456789"></div>
+      <div class="field"><label>Player 2 — Username</label><input id="fp2u" placeholder="Name"></div>
+      <div class="field"><label>Player 2 — Current / Peak Elo</label>
+        <div style="display:flex;gap:10px;"><input id="fp2e" type="number" placeholder="Elo"><input id="fp2p" type="number" placeholder="Peak"></div>
+      </div>
+      <div class="form-actions"><button class="btn" id="forceBtn" style="width:100%;">Force Add Team</button></div>
+    </div>
+  </div>
+
+  <div class="glass" style="margin-top:26px; padding:26px; overflow-x:auto;">
+    <h3 style="font-family:var(--font-display);font-size:0.95rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">🗑️ Registered Teams</h3>
+    <table class="teams-table" id="teamsTable">
+      <thead><tr><th>#</th><th>Team</th><th>Player 1</th><th>Player 2</th><th>Elo (cur/peak)</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Brawlhalla operations · authorized personnel only</footer>
+<div id="toast"></div>
+
+<script src="/js/particles.js"></script>
+<script src="/js/common.js?v=4"></script>
+<script>
+  document.getElementById('navCrest').innerHTML = crestSVG('sigil');
+  markActiveNav();
+  tiltInit();
+
+  const loginView = document.getElementById('loginView');
+  const dashView = document.getElementById('dashView');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  async function api(path, method = 'GET', body) {
+    const res = await fetch(path, {
+      method,
+      headers: body ? { 'content-type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, data };
+  }
+
+  async function boot() {
+    const me = await api('/api/admin/me');
+    const isAdmin = me.data.admin;
+    loginView.style.display = isAdmin ? 'none' : '';
+    dashView.style.display = isAdmin ? '' : 'none';
+    logoutBtn.style.display = isAdmin ? '' : 'none';
+    if (isAdmin) { refreshDash(); loadContent(); }
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    const pw = document.getElementById('pw').value;
+    const r = await api('/api/admin/login', 'POST', { password: pw });
+    if (r.status === 200) { toast('Welcome back, TO'); boot(); }
+    else toast('Wrong password', true);
+  });
+  document.getElementById('pw').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('loginBtn').click();
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await api('/api/admin/logout', 'POST', {});
+    boot();
+  });
+
+  // ----- dashboard -----
+  async function refreshDash() {
+    const [status, teams] = await Promise.all([
+      api('/api/status'),
+      api('/api/admin/teams'),
+    ]);
+    const open = status.data.registrationOpen;
+    const sw = document.getElementById('regSwitch');
+    sw.classList.toggle('on', open);
+    document.getElementById('regLabel').textContent = open ? 'Open' : 'Closed';
+    const cdNow = document.getElementById('cdNow');
+    if (status.data.tournamentStart) {
+      const d = new Date(status.data.tournamentStart);
+      cdNow.textContent = 'Starts: ' + d.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      cdNow.style.color = 'var(--gold)';
+    } else {
+      cdNow.textContent = 'No start time set';
+      cdNow.style.color = 'var(--ink-dim)';
+    }
+    const tbody = document.querySelector('#teamsTable tbody');
+    tbody.innerHTML = (teams.data.teams || []).map((t, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td class="team-pair"><b>${esc(t.p1.username)}</b> <span>+ ${esc(t.p2.username)}</span></td>
+        <td>${esc(t.p1.username)} <span style="color:var(--ink-dim)">(${esc(t.p1.discordId)})</span></td>
+        <td>${esc(t.p2.username)} <span style="color:var(--ink-dim)">(${esc(t.p2.discordId)})</span></td>
+        <td>${t.p1.elo}/${t.p1.peak} · ${t.p2.elo}/${t.p2.peak}</td>
+        <td><button class="btn small danger" data-del="${t.id}">Remove</button></td>
+      </tr>`).join('') || `<tr><td colspan="6" style="color:var(--ink-dim);text-align:center;padding:24px;">No teams registered yet.</td></tr>`;
+    tbody.querySelectorAll('[data-del]').forEach((b) =>
+      b.addEventListener('click', async () => {
+        if (!confirm('Remove this team? This cannot be undone.')) return;
+        const r = await api('/api/admin/teams/' + b.dataset.del, 'DELETE');
+        if (r.status === 200) { toast('Team removed'); refreshDash(); }
+        else toast('Failed to remove', true);
+      })
+    );
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  document.getElementById('regSwitch').addEventListener('click', async () => {
+    const open = !document.getElementById('regSwitch').classList.contains('on');
+    const r = await api('/api/admin/settings', 'POST', { open });
+    if (r.status === 200) { toast(open ? 'Registration opened' : 'Registration closed'); refreshDash(); }
+  });
+
+  document.getElementById('genBtn').addEventListener('click', async () => {
+    if (!confirm('Generate the bracket from current teams?')) return;
+    const r = await api('/api/admin/generate-bracket', 'POST', {});
+    if (r.status === 200) { toast('Bracket generated!'); location.href = '/bracket'; }
+    else toast(r.data.message || 'Failed — need at least 2 teams', true);
+  });
+
+  document.getElementById('cdSetBtn').addEventListener('click', async () => {
+    const raw = document.getElementById('cdInput').value;
+    if (!raw) { toast('Pick a date and time first', true); return; }
+    const r = await api('/api/admin/tournament-start', 'POST', { start: new Date(raw).toISOString() });
+    if (r.status === 200) { toast('Countdown set — the arena awaits'); refreshDash(); }
+    else toast(r.data.message || 'Start time must be in the future', true);
+  });
+
+  document.getElementById('cdClearBtn').addEventListener('click', async () => {
+    const r = await api('/api/admin/tournament-start', 'POST', { start: null });
+    if (r.status === 200) { toast('Countdown cleared'); document.getElementById('cdInput').value = ''; refreshDash(); }
+    else toast('Failed to clear', true);
+  });
+
+  document.getElementById('forceBtn').addEventListener('click', async () => {
+    const v = (id) => document.getElementById(id).value.trim();
+    const body = {
+      p1: { discordId: v('fp1d'), username: v('fp1u'), elo: Number(v('fp1e')), peak: Number(v('fp1p')) },
+      p2: { discordId: v('fp2d'), username: v('fp2u'), elo: Number(v('fp2e')), peak: Number(v('fp2p')) },
+    };
+    const r = await api('/api/admin/force-register', 'POST', body);
+    if (r.status === 201) { toast('Team force-registered'); refreshDash(); }
+    else toast(r.data.message || 'Failed', true);
+  });
+
+  // ----- rules & prizes editor -----
+  async function loadContent() {
+    const c = await api('/api/content');
+    document.getElementById('rulesText').value = c.data.rules || '';
+    document.getElementById('prizesText').value = c.data.prizes || '';
+  }
+  document.getElementById('saveContentBtn').addEventListener('click', async () => {
+    const r = await api('/api/admin/content', 'POST', {
+      rules: document.getElementById('rulesText').value,
+      prizes: document.getElementById('prizesText').value,
+    });
+    if (r.status === 200) toast('Content saved — live on the home page');
+    else toast('Failed to save', true);
+  });
+
+  boot();
+</script>
+</body>
+</html>
