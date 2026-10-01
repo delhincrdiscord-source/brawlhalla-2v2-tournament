@@ -25,6 +25,19 @@ function createApp(store, opts = {}) {
   app.use(express.json({ limit: '10kb' }));
   app.use(cookieParser());
 
+  // ---- canonical host ----
+  // Send every *.vercel.app host (the project alias plus each deployment's own
+  // immutable URL) to the real domain, so there is exactly one public address.
+  // Opt-in via CANONICAL_HOST; unset locally so dev is unaffected.
+  const canonicalHost = opts.canonicalHost || process.env.CANONICAL_HOST;
+  if (canonicalHost) {
+    app.use((req, res, next) => {
+      const host = String(req.headers.host || '').split(':')[0].toLowerCase();
+      if (host === canonicalHost || !host.endsWith('.vercel.app')) return next();
+      return res.redirect(308, `https://${canonicalHost}${req.originalUrl}`);
+    });
+  }
+
   // ---- security headers (helmet-lite, no extra deps) ----
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
