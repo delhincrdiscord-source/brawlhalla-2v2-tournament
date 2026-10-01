@@ -59,8 +59,8 @@ function createApp(store, opts = {}) {
   // Rate limiting is active in production (Vercel sets NODE_ENV=production).
   // Tests run many requests from one IP, so it stays off in test/dev.
   const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
-  const loginLimiter = isProd ? rateLimit({ windowMs: 15 * 60 * 1000, max: 20 }) : (req, res, next) => next();
-  const registerLimiter = isProd ? rateLimit({ windowMs: 60 * 1000, max: 10 }) : (req, res, next) => next();
+  const loginLimiter = isProd ? rateLimit({ windowMs: 60 * 1000, max: 5 }) : (req, res, next) => next();
+  const registerLimiter = isProd ? rateLimit({ windowMs: 60 * 1000, max: 5 }) : (req, res, next) => next();
 
   // ---- auth helpers ----
   // Signed stateless session cookie so admin auth survives serverless
